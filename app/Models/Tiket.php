@@ -17,10 +17,7 @@ class Tiket extends Model
     }
 
     // Relasi ke Kereta
-    public function kereta()
-    {
-        return $this->belongsTo(Kereta::class, 'nomor_kereta', 'nomor_kereta');
-    }
+
 
     // Relasi ke Stasiun
     public function stasiunKeberangkatan()

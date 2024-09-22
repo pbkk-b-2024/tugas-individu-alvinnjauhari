@@ -2,23 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Kelas;
-use App\Models\Jadwal;
+use App\Models\Kereta;
 use App\Models\Stasiun;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\StoreKeretaRequest;
+use App\Http\Requests\UpdateKeretaRequest;
 
 class KeretaController extends Controller
 {
     public function index(Request $request)
     {
         // Relasi yang ingin dimuat bersamaan
-        $relations = ['jadwal', 'kelas', 'stasiuns'];
+        $relations = ['kelas', 'stasiuns'];
 
         // Eager Loading dengan memuat ketiga relasi sekaligus
         $data['keretas'] = Kereta::with($relations)->paginate(10); // Misalnya paginasi 10 item per halaman
 
-        return view('kereta.index', compact('data'));
+        return view('tugas2.crud-kereta.kereta.index', compact('data'));
     }
 
     public function create()
@@ -26,25 +29,50 @@ class KeretaController extends Controller
         // Ambil semua kelas dan stasiun
         $data['kelas'] = Kelas::all();
         $data['stasiun'] = Stasiun::all();
-        return view('kereta.create', compact('data'));
+        return view('tugas2.crud-kereta.kereta.store', compact('data'));
     }
 
-    public function store(NewKeretaRequest $request)
-    {
-        // Validasi input
-        $validatedData = $request->validated();
+    public function store(StoreKeretaRequest $request)
+{
+    $validatedData = $request->validated();
 
-        // Buat kereta baru, simpan data ke tabel kereta
-        $kereta = Kereta::create($validatedData);
+    // Handle upload foto
+    if ($request->hasFile('foto')) {
+        $validatedData['foto'] = $request->file('foto')->store('foto_kereta', 'public'); // Menyimpan ke storage public
+    }
 
-        // Hubungkan kereta dengan kelas (Many-to-Many)
+    $kereta = Kereta::create($validatedData);
+
+    // Hubungkan kereta dengan kelas dan stasiun
+    if ($request->has('kelas')) {
         $kereta->kelas()->attach($request->input('kelas'));
-
-        // Hubungkan kereta dengan stasiun (Many-to-Many)
-        $kereta->stasiuns()->attach($request->input('stasiuns'), ['urutan_pemberhentian' => 1]); // Anda bisa mengganti urutan sesuai logika
-
-        return redirect()->route('kereta.index')->with('success', 'Kereta "' . $kereta->nama_kereta . '" sukses ditambahkan.');
     }
+
+    $stasiunCount = count($request->input('stasiuns'));
+    $jamKedatangan = $request->input('jam_kedatangan', []);
+    $jamKeberangkatan = $request->input('jam_keberangkatan', []);
+
+    if (count($jamKedatangan) !== $stasiunCount || count($jamKeberangkatan) !== $stasiunCount) {
+        // Tangani kesalahan, misalnya:
+        return redirect()->back()->withErrors(['msg' => 'Jumlah stasiun dan waktu tidak sesuai.']);
+    }
+
+    // Hubungkan kereta dengan stasiun (Many-to-Many)
+    if ($request->has('stasiuns')) {
+        $stasiunData = [];
+        foreach ($request->input('stasiuns') as $index => $stasiunId) {
+            $stasiunData[$stasiunId] = [
+                'urutan_pemberhentian' => $index + 1,
+                'jam_kedatangan' => $jamKedatangan[$index] ?? null,
+                'jam_keberangkatan' => $jamKeberangkatan[$index] ?? null
+            ];
+        }
+    $kereta->stasiuns()->attach($stasiunData);
+
+    }
+
+    return redirect()->route('kereta.index')->with('success', 'Kereta berhasil ditambahkan.');
+}
 
     public function show(Kereta $kereta)
     {
@@ -59,30 +87,47 @@ class KeretaController extends Controller
         $data['stasiun-kereta'] = $kereta->stasiuns->pluck('id')->toArray(); // Relasi many-to-many
         $data['kelas'] = Kelas::all();
         $data['stasiuns'] = Stasiun::all();
-        return view('kereta.edit', compact('data'));
+        return view('tugas2.crud-kereta.kereta.edit', compact('data','kereta'));
     }
 
     // Method update: Untuk mengupdate data kereta
-    public function update(UpdateKeretaRequest $request, Kereta $kereta)
-    {
-        // Validasi input
-        $validatedData = $request->validated();
+    public function update(Request $request, $id)
+{
+    // Validasi input
+    $request->validate([
+        'nomor' => 'required',
+        'nama' => 'required',
+        'jenis' => 'required',
+        'kelas' => 'required|array',
+        'stasiuns' => 'required|array',
+        'jam_kedatangan' => 'required|array',
+        'jam_keberangkatan' => 'required|array',
+    ]);
 
-        // Update data kereta
-        $kereta->update($validatedData);
+    $kereta = Kereta::findOrFail($id);
+    $kereta->nomor = $request->input('nomor');
+    $kereta->nama = $request->input('nama');
+    $kereta->jenis = $request->input('jenis');
 
-        // Sinkronkan kelas
-        $kereta->kelas()->sync($request->input('kelas'));
-
-        // Sinkronkan stasiun dengan urutan pemberhentian
-        $stasiunData = [];
-        foreach ($request->input('stasiuns') as $index => $stasiunId) {
-            $stasiunData[$stasiunId] = ['urutan_pemberhentian' => $index + 1];
-        }
-        $kereta->stasiuns()->sync($stasiunData);
-
-        return redirect()->route('kereta.index')->with('success', 'Kereta "' . $kereta->nama_kereta . '" sukses diubah.');
+    // Update foto jika ada
+    if ($request->hasFile('foto')) {
+        // Logika untuk menyimpan foto dan mengupdate pathnya
     }
+
+    $kereta->save();
+
+    // Mengupdate hubungan banyak ke banyak dengan stasiun
+    $kereta->stasiuns()->sync([]);
+    foreach ($request->input('stasiuns') as $index => $stasiunId) {
+        $kereta->stasiuns()->attach($stasiunId, [
+            'urutan_pemberhentian' => $index + 1,
+            'jam_kedatangan' => $request->input('jam_kedatangan')[$index],
+            'jam_keberangkatan' => $request->input('jam_keberangkatan')[$index],
+        ]);
+    }
+
+    return redirect()->route('kereta.index')->with('success', 'Data kereta berhasil diupdate.');
+}
 
     // Method destroy: Untuk menghapus data kereta
     public function destroy(Kereta $kereta)

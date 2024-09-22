@@ -11,29 +11,28 @@ class Kereta extends Model
     use HasFactory;
     use Searchable;
 
-    protected $table = 'kereta' ;
+    protected $table = 'keretas' ;
     
 
     protected $fillable = [
         'nomor',
         'nama',
         'jenis',
-        'kelas',
+        'foto',
     ];
 
     protected $primaryKey = 'nomor';
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
 
     public function kelas(){
         return $this->belongsToMany(Kelas::class, 'kelas_kereta', 'kereta_nomor', 'kelas_id');
     }
 
-    public function jadwals()
-    {
-        return $this->hasOne(Jadwal::class, 'kereta_nomor', 'nomor');
-    }
-
     public function stasiuns()
     {
-        return $this->belongsToMany(Stasiun::class, 'kereta_stasiun', 'nomor_kereta', 'stasiun_id');
+        return $this->belongsToMany(Stasiun::class, 'kereta_stasiun', 'kereta_nomor', 'stasiun_id')->withPivot('urutan_pemberhentian', 'jam_kedatangan', 'jam_keberangkatan');;
     }
 }

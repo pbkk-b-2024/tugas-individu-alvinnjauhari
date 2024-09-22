@@ -11,12 +11,8 @@ class Jadwal extends Model
 
     protected $table = 'jadwals';
 
-    protected $fillable = ['nomor_kereta', 'tanggal', 'jam_berangkat', 'jam_tiba'];
+    protected $fillable = ['tanggal', 'jam_berangkat', 'jam_tiba'];
 
     // Relasi one-to-one dengan model Kereta
-    public function kereta()
-    {
-        return $this->belongsTo(Kereta::class, 'nomor_kereta', 'nomor');
-    }
 }
 

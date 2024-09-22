@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Kursi;
 use App\Models\Tiket;
+use App\Models\Jadwal;
+use App\Models\Kereta;
+use App\Models\Stasiun;
+use App\Models\Penumpang;
 use Illuminate\Http\Request;
 
 class TiketController extends Controller

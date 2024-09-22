@@ -15,7 +15,6 @@ return new class extends Migration
         $table->string('nomor')->primary()->unique(); // Menambahkan unique pada nomor_kereta
         $table->string('nama');
         $table->string('jenis');
-        $table->string('kelas');
         $table->timestamps();
     });
 
@@ -27,7 +26,8 @@ return new class extends Migration
 
     Schema::create('kelas_kereta', function (Blueprint $table){
         $table->id();
-        $table->string('kereta_nomor')->constrained('keretas', 'nomor')->onDelete('cascade');
+        $table->string('kereta_nomor');
+        $table->foreign('kereta_nomor')->references('nomor')->on('keretas')->onDelete('cascade');        
         $table->foreignId('kelas_id')->constrained('kelas')->onDelete('cascade');
         $table->timestamps();
     });

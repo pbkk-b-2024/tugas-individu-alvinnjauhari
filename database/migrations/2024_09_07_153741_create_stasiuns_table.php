@@ -11,19 +11,25 @@ class CreateStasiunsTable extends Migration
         Schema::create('stasiuns', function (Blueprint $table) {
             $table->id();
             $table->string('nama_stasiun');
+            $table->string('kota');
             $table->timestamps();
         });
 
         // Tabel Pivot Kereta dan Stasiun
         Schema::create('kereta_stasiun', function (Blueprint $table) {
             $table->id();
-            $table->string('nomor_kereta');
+            $table->string('kereta_nomor'); // Pastikan tipe datanya sama dengan kolom 'nomor' di tabel 'keretas'       
             $table->unsignedBigInteger('stasiun_id');
-            $table->timestamps();
+            $table->integer('urutan_pemberhentian');
+            $table->timestamp('jam_kedatangan')->nullable();
+            $table->timestamp('jam_keberangkatan')->nullable();
 
-            $table->foreign('nomor_kereta')->references('nomor_kereta')->on('keretas')->onDelete('cascade');
+            $table->foreign('kereta_nomor')->references('nomor')->on('keretas')->onDelete('cascade');
             $table->foreign('stasiun_id')->references('id')->on('stasiuns')->onDelete('cascade');
+           
+            $table->timestamps();
         });
+        
     }
 
     public function down()

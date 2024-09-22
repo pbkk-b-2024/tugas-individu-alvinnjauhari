@@ -10,7 +10,7 @@ class Penumpang extends Model
     use HasFactory;
 
     // Tentukan nama tabel jika tidak menggunakan nama plural default Laravel
-    protected $table = 'penumpangs';
+    protected $table = 'penumpang';
 
     // Tentukan kolom yang boleh diisi (mass assignable)
     protected $fillable = [
